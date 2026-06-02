@@ -3,9 +3,9 @@ name: Send channel menu
 on:
   workflow_dispatch:
   schedule:
-    # 08:00 UTC = 10:00 CEST / 09:00 CET; single entry avoids double-sends.
-    # Python-side gate accepts a wide window to absorb GitHub scheduler delays.
-    - cron: '0 8 * * 1-5'
+    # 05:00 UTC = 07:00 CEST / 06:00 CET; scheduled early to absorb GitHub's
+    # typical 3-4 h delay and still land before noon Zurich time.
+    - cron: '0 5 * * 1-5'
 
 jobs:
   send-channel:
@@ -45,5 +45,5 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TIMEZONE: Europe/Zurich
-          SEND_HOUR_LOCAL: 10
+          SEND_HOUR_LOCAL: 7
         run: python channel_job.py

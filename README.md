@@ -61,7 +61,7 @@ Wed 22 Apr Autentico: Polpette di carne al pomodoro; Pasta: Pasta con seppioline
 
 ## Schedule
 
-The workflow runs at `08:00` UTC on weekdays. GitHub Actions often fires scheduled jobs 1–2 hours late, so the Python-side time gate accepts a 4-hour window (10:00–14:00 Europe/Zurich) rather than an exact hour.
+The workflow runs at `05:00` UTC on weekdays. GitHub Actions often fires scheduled jobs 3–4 hours late, so the Python-side time gate accepts a 4-hour window (07:00–11:00 Europe/Zurich) rather than an exact hour.
 
 Manual `workflow_dispatch` runs bypass that time gate for testing.
 
