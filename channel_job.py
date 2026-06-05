@@ -146,8 +146,8 @@ def main() -> int:
 
     now_local = datetime.now(ZoneInfo(TIMEZONE))
     today = now_local.date()
-    # GitHub scheduler typically fires 1–2 h late; accept a wide window so delays don't cause silent skips.
-    SEND_HOUR_MAX = SEND_HOUR_LOCAL + 4
+    # GitHub scheduler can fire 3-5+ h late; accept a wide window so delays don't cause silent skips.
+    SEND_HOUR_MAX = SEND_HOUR_LOCAL + 8
     if GITHUB_EVENT_NAME != 'workflow_dispatch' and not (SEND_HOUR_LOCAL <= now_local.hour < SEND_HOUR_MAX):
         print(
             f'Skip: local time is {now_local.strftime("%H:%M")} in {TIMEZONE}; '
