@@ -1,7 +1,16 @@
-name: Send channel menu
+name: Send 1908 menu
 
 on:
   workflow_dispatch:
+    inputs:
+      delivery_mode:
+        description: Delivery mode
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - live
   schedule:
     # 05:00 UTC = 07:00 CEST / 06:00 CET; scheduled early to absorb GitHub's
     # typical 3-4 h delay and still land before noon Zurich time.
@@ -22,28 +31,21 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements.txt
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-playwright-
-
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: Install Playwright browser
-        run: |
-          python -m playwright install --with-deps chromium
+      - name: Run tests
+        run: python -m pytest
 
       - name: Send channel menu
         env:
+          DELIVERY_MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.delivery_mode }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           TIMEZONE: Europe/Zurich
           SEND_HOUR_LOCAL: 7
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: python channel_job.py

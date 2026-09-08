@@ -4,156 +4,94 @@
 
 # USI Mensa Bot
 
-[![Send channel menu](https://github.com/kybeka/usi_campus_menu_bot/actions/workflows/send-channel.yml/badge.svg)](https://github.com/kybeka/usi_campus_menu_bot/actions/workflows/send-channel.yml)
+[![Send 1908 menu](https://github.com/kybeka/usi-mensa-bot-webhook/actions/workflows/send-channel.yml/badge.svg)](https://github.com/kybeka/usi-mensa-bot-webhook/actions/workflows/send-channel.yml)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
-![Playwright](https://img.shields.io/badge/scraper-Playwright-2ea44f)
+![1908](https://img.shields.io/badge/menu-1908-E76F51)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 [![Telegram](https://img.shields.io/badge/Telegram-@usi__mensa-26A5E4?logo=telegram&logoColor=white)](https://t.me/usi_mensa)
 ![Discord](https://img.shields.io/badge/Discord-webhook-5865F2?logo=discord&logoColor=white)
-![Vibe-coded](https://img.shields.io/badge/vibe--coded-yes-ff69b4)
 
-Posts the daily USI mensa menu to [@usi_mensa](https://t.me/usi_mensa) on Telegram and/or to a Discord channel via webhook, around 10:00 Europe/Zurich.
+Publishes the current [1908 USI–SUPSI menu](https://menu.1908.ch/usi-supsi) to Telegram and Discord on weekday mornings.
 
-Menus are currently treated as identical across the configured campuses, so the bot sends one combined channel message. On Mondays, it first sends a week-at-a-glance preview for Monday-Friday, marked as tentative because the official menu may still change.
+The source page covers Campus Est USI SUPSI Viganello, Campus Ovest USI Lugano and Campus SUPSI Mendrisio. The bot is unofficial and is not affiliated with USI, SUPSI or 1908.
 
-## Disclaimer
+## Behavior
 
-This project is unofficial and was created independently. It is not affiliated with, endorsed by, or maintained by the Universita della Svizzera italiana (USI), SV Group, or the USI mensa.
+- Fetches the complete weekly page once per run using a normal HTTP request.
+- Parses the Italian Monday–Friday menu from the server-rendered HTML.
+- Rejects stale weeks, malformed date ranges and unexpected page structures.
+- Sends the current day's full menu on weekdays.
+- Sends a weekly overview before Monday's daily menu.
+- Pins the Monday overview in Telegram.
+- Sends the overview to Discord without pinning; incoming Discord webhooks cannot manage channel pins.
+- Fails the workflow instead of posting a confusing fallback message when parsing breaks.
+- Defaults to dry-run mode, so local and manual validation cannot send accidentally.
 
-## Features
+The Monday overview describes the week that starts that morning. If 1908 has not published that week yet, the job fails without sending stale content.
 
-- Scrapes the official SV Gastronomie menu page with Playwright.
-- Posts to Telegram and/or Discord — configure one or both.
-- Sends a daily combined menu for all configured campuses.
-- Sends a Monday-only weekly preview before the daily message.
-- Clicks the real date tabs when collecting weekly menus.
-- Uses retry/backoff for transient scrape failures.
-- Falls back to the official menu link when scraping breaks.
-- Runs from GitHub Actions on a weekday schedule, with a Zurich local-time gate for DST safety.
+## Architecture
 
-## Examples
+- `mensa_bot/source.py` fetches and strictly parses the 1908 page.
+- `mensa_bot/models.py` defines the 1908-native weekly menu structure.
+- `mensa_bot/rendering.py` creates bounded Telegram HTML and Discord embeds.
+- `mensa_bot/delivery.py` contains the Telegram and Discord clients.
+- `mensa_bot/job.py` coordinates freshness checks, Monday pinning and daily delivery.
+- `mensa_bot/announcement.py` contains the guarded one-time migration announcement.
+- `channel_job.py` and `announcement_job.py` are small command entry points.
 
-| Telegram | Discord |
-|:---:|:---:|
-| <img src="img/example_telegram.png" width="340"> | <img src="img/example_discord.png" width="340"> |
+## Safety modes
 
-## Example Weekly Preview
+`DELIVERY_MODE` accepts two values:
 
-Sent on Mondays before the daily message, on both Telegram and Discord (as a code block).
+- `dry-run` is the default. It fetches, validates and prints both platform payloads without using credentials.
+- `live` enables configured Telegram and Discord publishers.
+
+Manual runs of the delivery workflow default to `dry-run`. Scheduled runs use `live` after the workflow becomes active on the default branch.
+
+The migration announcement requires all three delivery secrets and this additional confirmation:
 
 ```text
-USI Mensa - Week at a glance
-Tentative, may change. Check the official menu page for updates.
-
-Day        Menu
----------- ------------------------------------------------------------
-Mon 20 Apr Autentico: Cordon bleu di pollo; Pasta: Penne alla norma; Giardino: Piccata di tofu alla crema di datterini
-Tue 21 Apr Autentico: Spezzatino di maiale ai funghi; Pasta: Fusilli chiles en nogada; Giardino: Tomino del boscaiolo
-Wed 22 Apr Autentico: Polpette di carne al pomodoro; Pasta: Pasta con seppioline; Giardino: Frittata pomodorini e mozzarella
+ANNOUNCEMENT_CONFIRM=publish-1908-migration
 ```
 
-## How It Works
+It is designed to be triggered exactly once during the cutover.
 
-- [channel_job.py](channel_job.py) is the scheduled entry point. It checks runtime gates, fetches menu data, builds messages, and sends them to the configured platforms.
-- [menu_fetcher.py](menu_fetcher.py) handles Playwright page loading, day-tab clicks, text extraction, parsing, and message formatting (both Telegram HTML and Discord embeds).
-- [campus.py](campus.py) stores the campus display names and menu URLs.
-- [.github/workflows/send-channel.yml](.github/workflows/send-channel.yml) installs dependencies, installs Chromium, and runs the job.
+## Local validation
 
-## Schedule
-
-The workflow runs at `05:00` UTC on weekdays. GitHub Actions can fire scheduled jobs 3–5+ hours late, so the Python-side time gate accepts an 8-hour window (07:00–15:00 Europe/Zurich) rather than an exact hour.
-
-Manual `workflow_dispatch` runs bypass that time gate for testing.
-
-## Message Behavior
-
-Daily message:
-- Sent Monday-Friday when the current day menu parses successfully.
-- Contains all parsed menu cards and prices.
-- Uses one combined campus heading.
-
-Monday weekly preview:
-- Sent only on Mondays.
-- Sent before the normal daily message.
-- Sent only if Monday's normal daily menu parsed successfully.
-- Reuses Monday's already-fetched menu.
-- Scrapes Tuesday-Friday in one shared browser session by clicking each date tab.
-- Formats as a monospace table (Telegram) or a code-block embed (Discord).
-- Includes a "Tentative, may change" note.
-
-Failure handling:
-- No day section found: skip, likely closed/holiday/no menu published.
-- Day section found but zero parsed cards: send a fallback status message with the official link.
-- Scrape/fetch error after retries: send a fallback status message with the official link.
-- Weekly preview batch issue: log the error and continue to the normal daily message.
-
-## Local Run
+Use an existing Python environment and install the development requirements into that environment:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m playwright install chromium
+pip install -r requirements-dev.txt
+python -m pytest
+DELIVERY_MODE=dry-run python channel_job.py
+DELIVERY_MODE=dry-run python announcement_job.py
 ```
 
-At least one platform must be configured. Set only the credentials you need — the other platform is silently skipped.
-
-Telegram only:
-```bash
-TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... TIMEZONE=Europe/Zurich \
-python channel_job.py
-```
-
-Discord only:
-```bash
-DISCORD_WEBHOOK_URL=... TIMEZONE=Europe/Zurich \
-python channel_job.py
-```
-
-Both at once:
-```bash
-TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... DISCORD_WEBHOOK_URL=... TIMEZONE=Europe/Zurich \
-python channel_job.py
-```
-
-Add `GITHUB_EVENT_NAME=workflow_dispatch` to bypass the local-time gate during testing.
+Dry-run menu validation still reads the live 1908 page but never contacts Telegram or Discord.
 
 ## Deployment
 
-At least one of Telegram or Discord must be configured. Both can be active at the same time.
+The GitHub repository needs these Actions secrets for live delivery:
 
-### Telegram
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
+- `DISCORD_WEBHOOK_URL`
 
-Just join [@usi_mensa](https://t.me/usi_mensa) on Telegram — no setup needed.
+The Telegram bot must be a channel administrator with permission to edit messages so it can pin the Monday overview.
 
-If you're forking this repo for your own channel:
-1. Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as GitHub Actions secrets.
-2. Make sure the Telegram bot is allowed to post in the target channel.
-3. See the [Telegram Bot documentation](https://core.telegram.org/bots#how-do-i-create-a-bot) for creating a bot and obtaining its token and your channel's chat ID.
+The intended cutover is:
 
-### Discord
+1. Keep v2 on its isolated branch while tests and dry runs are reviewed.
+2. Run a live scrape with delivery disabled.
+3. Merge v2 only after the generated Telegram and Discord messages are approved.
+4. Trigger the one-time migration announcement.
+5. Let the replacement scheduled workflow take over; never run the v1 and v2 schedules together.
 
-1. In your Discord server, go to **Server Settings → Integrations → Webhooks → New Webhook**.
-2. Choose the channel, copy the webhook URL.
-3. Add it as a `DISCORD_WEBHOOK_URL` GitHub Actions secret.
+## Failure policy
 
-That's it — no bot account needed. The daily menu posts as a rich embed, and the Monday weekly preview posts as a monospace table in a code block.
+No subscriber-facing fallback message is sent for network, freshness or parsing failures. The GitHub Actions run turns red and records the reason instead.
 
-### Forking this repo
-
-If you want the bot for your own server or channel, fork the repo and add only the secrets you need. If you only add `DISCORD_WEBHOOK_URL`, Telegram is silently skipped. If you only add the Telegram secrets, Discord is silently skipped.
-
-Keep the workflow enabled and use `workflow_dispatch` for a manual smoke test when needed. The workflow has a `15` minute timeout so a stuck browser install or scrape cannot run indefinitely.
-
-## Updating Campuses
-
-Edit [campus.py](campus.py) to add, remove, or rename campuses. The current channel message assumes menus are identical across campuses and scrapes only `DEFAULT_CAMPUS`.
-
-## Public Repo Notes
-
-- Do not commit `.env`; it is ignored.
-- Keep all credentials (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL`) in GitHub Actions secrets. The Discord webhook URL is a full secret — anyone with it can post to your channel, so treat it like a password and regenerate it if accidentally exposed.
-- The scraper depends on the live SV Gastronomie website. If the site changes its tab markup or text structure, the scrape may need adjustment.
+Closed weekdays are accepted only when the source panel contains an explicit closure notice. An unexplained empty panel is treated as a structural failure.
 
 ## License
 
