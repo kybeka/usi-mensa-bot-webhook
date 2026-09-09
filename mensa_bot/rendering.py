@@ -38,8 +38,10 @@ def _date_it(value: date, *, year: bool = False) -> str:
 
 def _week_range(menu: WeeklyMenu) -> str:
     if menu.start_date.month == menu.end_date.month:
-        return f"{menu.start_date.day}–{_date_it(menu.end_date, year=True)}"
-    return f"{_date_it(menu.start_date)}–{_date_it(menu.end_date, year=True)}"
+        date_range = f"{menu.start_date.day}–{_date_it(menu.end_date, year=True)}"
+    else:
+        date_range = f"{_date_it(menu.start_date)}–{_date_it(menu.end_date, year=True)}"
+    return f"{date_range} · Settimana {menu.week_number}"
 
 
 def _money(value: Decimal | None) -> str | None:
@@ -190,7 +192,10 @@ def render_discord_day(menu: WeeklyMenu, day: DailyMenu) -> dict[str, Any]:
     embed: dict[str, Any] = {
         "title": f"🍽️ Menù di {day.label} {_date_it(day.date)}",
         "url": menu.source_url,
-        "description": "Campus Est · Campus Ovest · SUPSI Mendrisio",
+        "description": (
+            f"**{_week_range(menu)}**\n"
+            "Campus Est · Campus Ovest · SUPSI Mendrisio"
+        ),
         "color": DISCORD_COLOR,
     }
     if fields:

@@ -14,7 +14,9 @@ def test_telegram_messages_are_escaped_and_within_limits(weekly_menu) -> None:
     daily = render_telegram_day(weekly_menu, weekly_menu.days[0])
 
     assert "Tortilla con patate &amp; cipolle" in weekly
+    assert "7–11 settembre 2026 · Settimana 37" in weekly
     assert "Studenti: CHF 10.00" in daily
+    assert "7–11 settembre 2026 · Settimana 37" in daily
     assert len(weekly) <= TELEGRAM_TEXT_LIMIT
     assert len(daily) <= TELEGRAM_TEXT_LIMIT
 
@@ -26,6 +28,7 @@ def test_discord_messages_are_within_limits_and_disable_mentions(weekly_menu) ->
     ):
         assert payload["allowed_mentions"] == {"parse": []}
         embed = payload["embeds"][0]
+        assert "7–11 settembre 2026 · Settimana 37" in embed["description"]
         total = len(embed.get("title", "")) + len(embed.get("description", ""))
         for field in embed.get("fields", []):
             assert len(field["value"]) <= DISCORD_FIELD_VALUE_LIMIT

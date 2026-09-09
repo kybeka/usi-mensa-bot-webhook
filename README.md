@@ -48,7 +48,8 @@ The Monday overview describes the week that starts that morning. If 1908 has not
 
 Manual runs of the delivery workflow default to `dry-run`. Scheduled runs use `live` after the workflow becomes active on the default branch.
 
-The migration announcement requires all three delivery secrets and this additional confirmation:
+The migration announcement uses whichever delivery destinations are configured and requires this
+additional confirmation:
 
 ```text
 ANNOUNCEMENT_CONFIRM=publish-1908-migration
@@ -71,11 +72,13 @@ Dry-run menu validation still reads the live 1908 page but never contacts Telegr
 
 ## Deployment
 
-The GitHub repository needs these Actions secrets for live delivery:
+Configure at least one live delivery destination with these Actions secrets:
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
-- `DISCORD_WEBHOOK_URL`
+- Telegram: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
+- Discord: `DISCORD_WEBHOOK_URL`
+
+The official deployment publishes to Telegram. Fork owners can add their own Discord webhook URL
+to publish the same menu and migration announcement to a Discord channel.
 
 The Telegram bot must be a channel administrator with permission to edit messages so it can pin the Monday overview.
 

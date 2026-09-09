@@ -1,4 +1,6 @@
-from mensa_bot.delivery import DiscordPublisher, TelegramPublisher
+import pytest
+
+from mensa_bot.delivery import DeliveryError, DiscordPublisher, TelegramPublisher
 
 
 class FakeResponse:
@@ -36,6 +38,53 @@ def test_telegram_sends_then_pins_returned_message() -> None:
     assert session.posts[1][0].endswith("/pinChatMessage")
     assert session.posts[1][1]["message_id"] == 42
     assert session.posts[1][1]["disable_notification"] is True
+
+
+def test_telegram_pin_preflight_accepts_channel_editor() -> None:
+    session = FakeSession(
+        [
+            FakeResponse(200, {"ok": True, "result": {"id": 123, "is_bot": True}}),
+            FakeResponse(
+                200,
+                {
+                    "ok": True,
+                    "result": {
+                        "status": "administrator",
+                        "can_edit_messages": True,
+                    },
+                },
+            ),
+        ]
+    )
+    publisher = TelegramPublisher("token", "@usi_mensa", session=session)
+
+    publisher.assert_can_pin()
+
+    assert session.posts[0][0].endswith("/getMe")
+    assert session.posts[1][0].endswith("/getChatMember")
+    assert session.posts[1][1] == {"chat_id": "@usi_mensa", "user_id": 123}
+
+
+def test_telegram_pin_preflight_rejects_missing_permission() -> None:
+    session = FakeSession(
+        [
+            FakeResponse(200, {"ok": True, "result": {"id": 123, "is_bot": True}}),
+            FakeResponse(
+                200,
+                {
+                    "ok": True,
+                    "result": {
+                        "status": "administrator",
+                        "can_edit_messages": False,
+                    },
+                },
+            ),
+        ]
+    )
+    publisher = TelegramPublisher("token", "@usi_mensa", session=session)
+
+    with pytest.raises(DeliveryError, match="cannot pin messages"):
+        publisher.assert_can_pin()
 
 
 def test_discord_posts_payload() -> None:
