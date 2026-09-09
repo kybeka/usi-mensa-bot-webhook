@@ -1,4 +1,5 @@
 name: Send 1908 menu
+run-name: Send 1908 menu (${{ github.event_name == 'schedule' && 'live' || inputs.delivery_mode }})
 
 on:
   workflow_dispatch:
@@ -16,10 +17,24 @@ on:
     # typical 3-4 h delay and still land before noon Zurich time.
     - cron: '0 5 * * 1-5'
 
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: send-1908-menu
+  cancel-in-progress: false
+
 jobs:
   send-channel:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      DELIVERY_MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.delivery_mode }}
+      TIMEZONE: Europe/Zurich
+      SEND_HOUR_LOCAL: 6
+      SEND_WINDOW_HOURS: 12
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -39,13 +54,54 @@ jobs:
       - name: Run tests
         run: python -m pytest
 
+      - name: Refuse live delivery from a non-default branch
+        if: env.DELIVERY_MODE == 'live' && github.ref_name != github.event.repository.default_branch
+        run: |
+          echo "::error::Live delivery is allowed only from the default branch."
+          exit 1
+
+      - name: Determine the Zurich delivery date
+        if: env.DELIVERY_MODE == 'live'
+        id: delivery-date
+        run: |
+          delivery_date="$(TZ="$TIMEZONE" date +%Y-%m-%d)"
+          echo "date=$delivery_date" >> "$GITHUB_OUTPUT"
+          echo "lock_name=menu-delivery-$delivery_date" >> "$GITHUB_OUTPUT"
+
+      - name: Validate the live payload before acquiring the lock
+        if: env.DELIVERY_MODE == 'live'
+        env:
+          DELIVERY_MODE: dry-run
+        run: python channel_job.py
+
+      - name: Check the per-day delivery lock
+        if: env.DELIVERY_MODE == 'live'
+        env:
+          DELIVERY_DATE: ${{ steps.delivery-date.outputs.date }}
+          GH_TOKEN: ${{ github.token }}
+        run: python -m mensa_bot.delivery_lock
+
+      - name: Create the per-day delivery marker
+        if: env.DELIVERY_MODE == 'live'
+        run: |
+          mkdir -p delivery-lock-state
+          printf 'date=%s\nrun_id=%s\n' \
+            '${{ steps.delivery-date.outputs.date }}' \
+            "$GITHUB_RUN_ID" > delivery-lock-state/attempt.txt
+
+      - name: Acquire the per-day delivery lock
+        if: env.DELIVERY_MODE == 'live'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.delivery-date.outputs.lock_name }}
+          path: delivery-lock-state/attempt.txt
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
       - name: Send channel menu
         env:
-          DELIVERY_MODE: ${{ github.event_name == 'schedule' && 'live' || inputs.delivery_mode }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          TIMEZONE: Europe/Zurich
-          SEND_HOUR_LOCAL: 7
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: python channel_job.py

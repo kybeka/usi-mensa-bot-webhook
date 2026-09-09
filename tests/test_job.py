@@ -105,3 +105,25 @@ def test_dry_run_needs_no_delivery_credentials(weekly_menu, capsys) -> None:
     assert "DRY_RUN platform=discord message=daily" in output
     assert outcome.weekly_sent is False
     assert outcome.daily_sent is False
+
+
+def test_scheduled_winter_run_is_allowed_from_06_until_18(weekly_menu) -> None:
+    settings = Settings(
+        github_event_name="schedule",
+        send_hour_local=6,
+        send_window_hours=12,
+    )
+
+    at_open = run_job(
+        settings,
+        now=datetime(2026, 9, 7, 6, tzinfo=ZoneInfo("Europe/Zurich")),
+        menu=weekly_menu,
+    )
+    at_close = run_job(
+        settings,
+        now=datetime(2026, 9, 7, 18, tzinfo=ZoneInfo("Europe/Zurich")),
+        menu=weekly_menu,
+    )
+
+    assert at_open.published_week == 37
+    assert at_close.skipped_reason == "outside_send_window"

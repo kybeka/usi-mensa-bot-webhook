@@ -47,6 +47,15 @@ The Monday overview describes the week that starts that morning. If 1908 has not
 - `live` enables configured Telegram and Discord publishers.
 
 Manual runs of the delivery workflow default to `dry-run`. Scheduled runs use `live` after the workflow becomes active on the default branch.
+The scheduled-delivery gate accepts runs from 06:00 through 17:59 Europe/Zurich, covering both
+summer and winter time as well as normal GitHub scheduler delays.
+
+Live runs are serialized and protected by a per-day repository lock. Immediately before delivery,
+the workflow uploads a seven-day lock artifact named `menu-delivery-YYYY-MM-DD`; another live run
+for that Zurich date stops before contacting Telegram or Discord. Successful and active scheduled
+runs are also recognized for compatibility with deliveries made before the artifact lock existed.
+Dry runs never create a lock. If a live run fails after acquiring its artifact, delete that artifact
+only after confirming that no message reached either platform.
 
 The migration announcement uses whichever delivery destinations are configured and requires this
 additional confirmation:
