@@ -1,0 +1,51 @@
+name: Menu problem
+description: Report a missing, incorrect or badly formatted menu post.
+title: "Menu problem: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping keep the menu accurate. Please do not include private information or bot credentials.
+
+  - type: input
+    id: menu_date
+    attributes:
+      label: Menu date
+      description: Which day's menu was affected?
+      placeholder: YYYY-MM-DD
+    validations:
+      required: true
+
+  - type: dropdown
+    id: problem_type
+    attributes:
+      label: What went wrong?
+      options:
+        - The menu was not posted
+        - A dish or price was incorrect
+        - The message formatting looked wrong
+        - The menu was posted more than once
+        - Something else
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where did you notice it?
+      options:
+        - Telegram
+        - Discord
+        - GitHub Actions
+        - Somewhere else
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened?
+      description: Describe what you expected and what you saw instead. You can drag a screenshot into this box.
+      placeholder: The menu for ...
+    validations:
+      required: true
