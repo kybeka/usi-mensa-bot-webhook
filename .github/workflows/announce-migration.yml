@@ -8,11 +8,34 @@ on:
         required: true
         type: string
 
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: migration-announcement
+  cancel-in-progress: false
+
 jobs:
   announce:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Refuse a duplicate announcement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous_run_url="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/announce-migration.yml/runs?status=success&per_page=1" \
+              --jq '.workflow_runs[0].html_url // empty'
+          )"
+          if [[ -n "$previous_run_url" ]]; then
+            echo "::error::The migration announcement was already sent by $previous_run_url"
+            exit 1
+          fi
+          echo "No previous successful migration announcement was found."
+
       - name: Check out repository
         uses: actions/checkout@v4
 

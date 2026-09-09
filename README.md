@@ -56,6 +56,9 @@ ANNOUNCEMENT_CONFIRM=publish-1908-migration
 ```
 
 It is designed to be triggered exactly once during the cutover.
+The workflow serializes concurrent attempts and refuses to send when its repository already has a
+successful migration-announcement run. Forks keep independent workflow histories, so each fork can
+send its own announcement once.
 
 ## Local validation
 
