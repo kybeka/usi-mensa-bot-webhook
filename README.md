@@ -5,108 +5,33 @@
 # USI Mensa Bot
 
 [![Send 1908 menu](https://github.com/kybeka/usi-mensa-bot-webhook/actions/workflows/send-channel.yml/badge.svg)](https://github.com/kybeka/usi-mensa-bot-webhook/actions/workflows/send-channel.yml)
-![Python](https://img.shields.io/badge/python-3.12-blue)
+[![Telegram](https://img.shields.io/badge/Telegram-@usi__mensa-26A5E4?logo=telegram&logoColor=white)](https://t.me/usi_mensa)
 ![1908](https://img.shields.io/badge/menu-1908-E76F51)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-[![Telegram](https://img.shields.io/badge/Telegram-@usi__mensa-26A5E4?logo=telegram&logoColor=white)](https://t.me/usi_mensa)
-![Discord](https://img.shields.io/badge/Discord-webhook-5865F2?logo=discord&logoColor=white)
 
-Publishes the current [1908 USI–SUPSI menu](https://menu.1908.ch/usi-supsi) to Telegram and Discord on weekday mornings.
+An unofficial bot that publishes the current [1908 USI–SUPSI menu](https://menu.1908.ch/usi-supsi) every weekday morning.
 
-The source page covers Campus Est USI SUPSI Viganello, Campus Ovest USI Lugano and Campus SUPSI Mendrisio. The bot is unofficial and is not affiliated with USI, SUPSI or 1908.
+> Is a menu missing or incorrect? [Leave an issue](https://github.com/kybeka/usi-mensa-bot-webhook/issues/new?template=menu-problem.yml) with the date and what went wrong.
 
-## Behavior
+## Follow the menu
 
-- Fetches the complete weekly page once per run using a normal HTTP request.
-- Parses the Italian Monday–Friday menu from the server-rendered HTML.
-- Rejects stale weeks, malformed date ranges and unexpected page structures.
-- Sends the current day's full menu on weekdays.
-- Sends a weekly overview before Monday's daily menu.
-- Pins the Monday overview in Telegram.
-- Sends the overview to Discord without pinning; incoming Discord webhooks cannot manage channel pins.
-- Fails the workflow instead of posting a confusing fallback message when parsing breaks.
-- Defaults to dry-run mode, so local and manual validation cannot send accidentally.
+Follow [@usi_mensa on Telegram](https://t.me/usi_mensa) to receive the menu from Monday to Friday.
 
-The Monday overview describes the week that starts that morning. If 1908 has not published that week yet, the job fails without sending stale content.
+On Monday, the bot first posts and pins a compact overview of the new week, then posts Monday's full menu. On the remaining weekdays, it posts that day's menu.
 
-## Architecture
+The source covers Campus Est USI–SUPSI Viganello, Campus Ovest USI Lugano and Campus SUPSI Mendrisio.
 
-- `mensa_bot/source.py` fetches and strictly parses the 1908 page.
-- `mensa_bot/models.py` defines the 1908-native weekly menu structure.
-- `mensa_bot/rendering.py` creates bounded Telegram HTML and Discord embeds.
-- `mensa_bot/delivery.py` contains the Telegram and Discord clients.
-- `mensa_bot/job.py` coordinates freshness checks, Monday pinning and daily delivery.
-- `mensa_bot/announcement.py` contains the guarded one-time migration announcement.
-- `channel_job.py` and `announcement_job.py` are small command entry points.
+## About this project
 
-## Safety modes
+This bot was created and is maintained by [@kybeka](https://github.com/kybeka). Its source is public for anyone curious about how it works or interested in running their own copy.
 
-`DELIVERY_MODE` accepts two values:
+The bot reads the menu directly from 1908 and stays quiet when the page is unavailable, stale or malformed, rather than publishing potentially incorrect food information.
 
-- `dry-run` is the default. It fetches, validates and prints both platform payloads without using credentials.
-- `live` enables configured Telegram and Discord publishers.
+This is an independent community project and is not affiliated with USI, SUPSI or 1908.
 
-Manual runs of the delivery workflow default to `dry-run`. Scheduled runs use `live` after the workflow becomes active on the default branch.
-The scheduled-delivery gate accepts runs from 06:00 through 17:59 Europe/Zurich, covering both
-summer and winter time as well as normal GitHub scheduler delays.
+## Run your own copy
 
-Live runs are serialized and protected by a per-day repository lock. Immediately before delivery,
-the workflow uploads a seven-day lock artifact named `menu-delivery-YYYY-MM-DD`; another live run
-for that Zurich date stops before contacting Telegram or Discord. Successful and active scheduled
-runs are also recognized for compatibility with deliveries made before the artifact lock existed.
-Dry runs never create a lock. If a live run fails after acquiring its artifact, delete that artifact
-only after confirming that no message reached either platform.
-
-The migration announcement uses whichever delivery destinations are configured and requires this
-additional confirmation:
-
-```text
-ANNOUNCEMENT_CONFIRM=publish-1908-migration
-```
-
-It is designed to be triggered exactly once during the cutover.
-The workflow serializes concurrent attempts and refuses to send when its repository already has a
-successful migration-announcement run. Forks keep independent workflow histories, so each fork can
-send its own announcement once.
-
-## Local validation
-
-Use an existing Python environment and install the development requirements into that environment:
-
-```bash
-pip install -r requirements-dev.txt
-python -m pytest
-DELIVERY_MODE=dry-run python channel_job.py
-DELIVERY_MODE=dry-run python announcement_job.py
-```
-
-Dry-run menu validation still reads the live 1908 page but never contacts Telegram or Discord.
-
-## Deployment
-
-Configure at least one live delivery destination with these Actions secrets:
-
-- Telegram: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`
-- Discord: `DISCORD_WEBHOOK_URL`
-
-The official deployment publishes to Telegram. Fork owners can add their own Discord webhook URL
-to publish the same menu and migration announcement to a Discord channel.
-
-The Telegram bot must be a channel administrator with permission to edit messages so it can pin the Monday overview.
-
-The intended cutover is:
-
-1. Keep v2 on its isolated branch while tests and dry runs are reviewed.
-2. Run a live scrape with delivery disabled.
-3. Merge v2 only after the generated Telegram and Discord messages are approved.
-4. Trigger the one-time migration announcement.
-5. Let the replacement scheduled workflow take over; never run the v1 and v2 schedules together.
-
-## Failure policy
-
-No subscriber-facing fallback message is sent for network, freshness or parsing failures. The GitHub Actions run turns red and records the reason instead.
-
-Closed weekdays are accepted only when the source panel contains an explicit closure notice. An unexplained empty panel is treated as a structural failure.
+Forks can publish to Telegram, Discord or both. Setup instructions and technical details are in the [maintainer guide](docs/OPERATIONS.md).
 
 ## License
 
