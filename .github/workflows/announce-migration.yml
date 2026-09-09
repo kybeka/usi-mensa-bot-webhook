@@ -1,0 +1,36 @@
+name: Announce 1908 migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type publish-1908-migration to send the one-time announcement
+        required: true
+        type: string
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send migration announcement
+        env:
+          DELIVERY_MODE: live
+          ANNOUNCEMENT_CONFIRM: ${{ inputs.confirmation }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python announcement_job.py
