@@ -68,6 +68,30 @@ class TelegramPublisher:
             },
         )
 
+    def assert_can_pin(self) -> None:
+        bot = self._call("getMe", {})
+        if not isinstance(bot, dict) or not isinstance(bot.get("id"), int):
+            raise DeliveryError("Telegram getMe did not return a bot user ID.")
+
+        member = self._call(
+            "getChatMember",
+            {"chat_id": self._chat_id, "user_id": bot["id"]},
+        )
+        if not isinstance(member, dict):
+            raise DeliveryError("Telegram getChatMember did not return membership details.")
+
+        status = member.get("status")
+        can_pin = status == "creator" or (
+            status == "administrator"
+            and bool(member.get("can_edit_messages") or member.get("can_pin_messages"))
+        )
+        if not can_pin:
+            raise DeliveryError(
+                "The Telegram bot cannot pin messages in the configured chat. "
+                "Grant it administrator permission to edit messages in a channel "
+                "or pin messages in a group."
+            )
+
 
 class DiscordPublisher:
     def __init__(

@@ -78,11 +78,18 @@ def run_announcement(
         raise RuntimeError(
             f"Set ANNOUNCEMENT_CONFIRM={CONFIRMATION_VALUE!r} for the one-time live announcement."
         )
-    if telegram is None or discord is None:
-        raise RuntimeError("The migration announcement requires both Telegram and Discord delivery.")
-    telegram.send_html(telegram_text)
-    discord.send(discord_payload)
-    print("OUTCOME type=migration_announcement platforms=telegram,discord")
+    if telegram is None and discord is None:
+        raise RuntimeError("The migration announcement requires a configured delivery destination.")
+
+    platforms: list[str] = []
+    if telegram is not None:
+        telegram.assert_can_pin()
+        telegram.send_html(telegram_text)
+        platforms.append("telegram")
+    if discord is not None:
+        discord.send(discord_payload)
+        platforms.append("discord")
+    print(f"OUTCOME type=migration_announcement platforms={','.join(platforms)}")
 
 
 def main() -> int:

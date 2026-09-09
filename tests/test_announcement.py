@@ -12,6 +12,10 @@ from mensa_bot.config import DeliveryMode, Settings
 class FakeTelegram:
     def __init__(self) -> None:
         self.messages: list[str] = []
+        self.pin_permission_checked = False
+
+    def assert_can_pin(self) -> None:
+        self.pin_permission_checked = True
 
     def send_html(self, text: str) -> int:
         self.messages.append(text)
@@ -77,3 +81,45 @@ def test_confirmed_announcement_sends_once_to_each_platform() -> None:
 
     assert len(telegram.messages) == 1
     assert len(discord.payloads) == 1
+    assert telegram.pin_permission_checked is True
+
+
+def test_confirmed_announcement_supports_telegram_only() -> None:
+    settings = Settings(
+        delivery_mode=DeliveryMode.LIVE,
+        telegram_bot_token="token",
+        telegram_chat_id="chat",
+    )
+    telegram = FakeTelegram()
+
+    run_announcement(
+        settings,
+        telegram=telegram,
+        confirmation=CONFIRMATION_VALUE,
+    )
+
+    assert len(telegram.messages) == 1
+    assert telegram.pin_permission_checked is True
+
+
+def test_confirmed_announcement_supports_discord_only() -> None:
+    settings = Settings(
+        delivery_mode=DeliveryMode.LIVE,
+        discord_webhook_url="https://discord.example/webhook",
+    )
+    discord = FakeDiscord()
+
+    run_announcement(
+        settings,
+        discord=discord,
+        confirmation=CONFIRMATION_VALUE,
+    )
+
+    assert len(discord.payloads) == 1
+
+
+def test_confirmed_announcement_requires_a_destination() -> None:
+    settings = Settings(delivery_mode=DeliveryMode.LIVE)
+
+    with pytest.raises(RuntimeError, match="configured delivery destination"):
+        run_announcement(settings, confirmation=CONFIRMATION_VALUE)
