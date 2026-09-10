@@ -6,6 +6,7 @@
 
 [![Send 1908 menu](https://github.com/kybeka/usi-mensa-bot-webhook/actions/workflows/send-channel.yml/badge.svg)](https://github.com/kybeka/usi-mensa-bot-webhook/actions/workflows/send-channel.yml)
 [![Telegram](https://img.shields.io/badge/Telegram-@usi__mensa-26A5E4?logo=telegram&logoColor=white)](https://t.me/usi_mensa)
+[![Discord](https://img.shields.io/badge/Discord-USI_Mensa-5865F2?logo=discord&logoColor=white)](https://discord.gg/dCxYTt9BX)
 ![1908](https://img.shields.io/badge/menu-1908-E76F51)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -15,7 +16,7 @@ An unofficial bot that publishes the current [1908 USI–SUPSI menu](https://men
 
 ## Follow the menu
 
-Follow [@usi_mensa on Telegram](https://t.me/usi_mensa) to receive the menu from Monday to Friday.
+Follow [@usi_mensa on Telegram](https://t.me/usi_mensa), or join the [USI Mensa Discord server](https://discord.gg/dCxYTt9BX) and enable notifications for `#mensa-menu`, to receive the menu from Monday to Friday.
 
 On Monday, the bot first posts and pins a compact overview of the new week, then posts Monday's full menu. On the remaining weekdays, it posts that day's menu.
 
