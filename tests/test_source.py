@@ -40,6 +40,19 @@ def test_parses_only_the_italian_tab_group(fixture_html: str) -> None:
     assert all(item.name != "Must not be parsed" for day in menu.days for item in day.items)
 
 
+def test_accepts_esterne_as_an_external_price_label(fixture_html: str) -> None:
+    menu = parse_weekly_menu(fixture_html.replace("Esterni:", "Esterne:", 1))
+
+    assert menu.days[0].items[0].prices.external == Decimal("13.00")
+
+
+def test_rejects_an_unknown_price_label(fixture_html: str) -> None:
+    broken = fixture_html.replace("Esterni:", "Visitatori:", 1)
+
+    with pytest.raises(MenuStructureError, match="Unrecognized price"):
+        parse_weekly_menu(broken)
+
+
 def test_rejects_a_stale_published_week(weekly_menu) -> None:
     with pytest.raises(PublishedWeekMismatch, match="does not cover"):
         require_current_week(weekly_menu, date(2026, 9, 14))

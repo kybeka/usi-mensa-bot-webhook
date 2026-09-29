@@ -23,9 +23,15 @@ DATE_RANGE_RE = re.compile(
 )
 WEEK_NUMBER_RE = re.compile(r"SETTIMANA\s+(\d{1,2})", re.IGNORECASE)
 PRICE_RE = re.compile(
-    r"^(Studenti|Collaboratori|Esterni):\s*CHF\s*([\d.,]+)$",
+    r"^(Studenti|Collaboratori|Esterni|Esterne):\s*CHF\s*([\d.,]+)$",
     re.IGNORECASE,
 )
+PRICE_LABEL_ALIASES = {
+    "studenti": "studenti",
+    "collaboratori": "collaboratori",
+    "esterni": "esterni",
+    "esterne": "esterni",
+}
 CLOSED_RE = re.compile(r"\b(chiuso|chiusa|festa|festivo|ferie)\b", re.IGNORECASE)
 
 
@@ -83,7 +89,7 @@ def _parse_price(value: str) -> tuple[str, Decimal]:
         amount = Decimal(match.group(2).replace(",", "."))
     except InvalidOperation as exc:
         raise MenuStructureError(f"Invalid CHF amount: {value!r}") from exc
-    return match.group(1).casefold(), amount
+    return PRICE_LABEL_ALIASES[match.group(1).casefold()], amount
 
 
 def _dietary_tags(category: str) -> tuple[str, ...]:

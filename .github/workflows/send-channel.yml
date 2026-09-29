@@ -69,7 +69,7 @@ jobs:
           echo "lock_name=menu-delivery-$delivery_date" >> "$GITHUB_OUTPUT"
 
       - name: Validate the live payload before acquiring the lock
-        if: env.DELIVERY_MODE == 'live'
+        if: github.event_name == 'schedule' || inputs.delivery_mode == 'live'
         env:
           DELIVERY_MODE: dry-run
         run: python channel_job.py
