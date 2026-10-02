@@ -107,6 +107,20 @@ def test_dry_run_needs_no_delivery_credentials(weekly_menu, capsys) -> None:
     assert outcome.daily_sent is False
 
 
+def test_job_reads_the_validated_snapshot(fixture_html: str, tmp_path, capsys) -> None:
+    snapshot = tmp_path / "current-week.html"
+    snapshot.write_text(fixture_html, encoding="utf-8")
+
+    outcome = run_job(
+        Settings(menu_snapshot_path=str(snapshot)),
+        now=datetime(2026, 9, 11, 10, tzinfo=ZoneInfo("Europe/Zurich")),
+    )
+
+    assert "Dessert del giorno" in capsys.readouterr().out
+    assert outcome.published_week == 37
+    assert outcome.daily_sent is False
+
+
 def test_scheduled_winter_run_is_allowed_from_06_until_18(weekly_menu) -> None:
     settings = Settings(
         github_event_name="schedule",

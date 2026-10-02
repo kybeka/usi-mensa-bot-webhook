@@ -2,6 +2,7 @@ import json
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 from zoneinfo import ZoneInfo
 
@@ -14,7 +15,13 @@ from .rendering import (
     render_telegram_day,
     render_telegram_week,
 )
-from .source import MenuError, MenuFetchError, fetch_weekly_menu, require_current_week
+from .source import (
+    MenuError,
+    MenuFetchError,
+    fetch_weekly_menu,
+    parse_weekly_menu,
+    require_current_week,
+)
 
 
 @dataclass(frozen=True)
@@ -61,6 +68,18 @@ def _print_dry_run(label: str, telegram_text: str, discord_payload: dict) -> Non
     )
 
 
+def _load_weekly_menu(settings: Settings) -> WeeklyMenu:
+    if not settings.menu_snapshot_path:
+        return _fetch_with_retry(settings)
+
+    path = Path(settings.menu_snapshot_path)
+    try:
+        html = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise MenuFetchError(f"Could not read menu snapshot {path}: {exc}") from exc
+    return parse_weekly_menu(html, source_url=settings.menu_url)
+
+
 def run_job(
     settings: Settings,
     *,
@@ -83,7 +102,7 @@ def run_job(
         if not settings.send_hour_local <= now_local.hour < window_end:
             return JobOutcome(None, False, False, False, "outside_send_window")
 
-    weekly_menu = menu or _fetch_with_retry(settings)
+    weekly_menu = menu or _load_weekly_menu(settings)
     target_date = now_local.date()
     require_current_week(weekly_menu, target_date)
     today_menu = weekly_menu.menu_for(target_date)
