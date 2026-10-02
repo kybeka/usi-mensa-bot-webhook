@@ -32,6 +32,7 @@ class Settings:
     fetch_retry_backoff_seconds: float = 3
     request_timeout_seconds: float = 30
     github_event_name: str = ""
+    menu_snapshot_path: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -55,6 +56,7 @@ class Settings:
             fetch_retry_backoff_seconds=float(os.getenv("FETCH_RETRY_BACKOFF_SECONDS", "3")),
             request_timeout_seconds=float(os.getenv("REQUEST_TIMEOUT_SECONDS", "30")),
             github_event_name=os.getenv("GITHUB_EVENT_NAME", "").strip(),
+            menu_snapshot_path=os.getenv("MENU_SNAPSHOT_PATH", "").strip(),
         )
         settings.validate()
         return settings

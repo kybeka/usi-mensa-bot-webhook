@@ -1,4 +1,5 @@
 import re
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 
@@ -49,6 +50,12 @@ class MenuStructureError(MenuError):
 
 class PublishedWeekMismatch(MenuError):
     pass
+
+
+@dataclass(frozen=True)
+class FetchedMenuPage:
+    html: str
+    last_modified: str | None
 
 
 def _text(node: Tag | None) -> str:
@@ -199,12 +206,12 @@ def parse_weekly_menu(
     )
 
 
-def fetch_weekly_menu(
+def fetch_menu_page(
     url: str = DEFAULT_MENU_URL,
     *,
     timeout_seconds: float = 30,
     session: requests.Session | None = None,
-) -> WeeklyMenu:
+) -> FetchedMenuPage:
     client = session or requests.Session()
     try:
         response = client.get(
@@ -220,10 +227,28 @@ def fetch_weekly_menu(
     except requests.RequestException as exc:
         raise MenuFetchError(f"Could not fetch the 1908 menu: {exc}") from exc
 
+    return FetchedMenuPage(
+        html=response.text,
+        last_modified=response.headers.get("Last-Modified"),
+    )
+
+
+def fetch_weekly_menu(
+    url: str = DEFAULT_MENU_URL,
+    *,
+    timeout_seconds: float = 30,
+    session: requests.Session | None = None,
+) -> WeeklyMenu:
+    page = fetch_menu_page(
+        url,
+        timeout_seconds=timeout_seconds,
+        session=session,
+    )
+
     return parse_weekly_menu(
-        response.text,
+        page.html,
         source_url=url,
-        source_last_modified=response.headers.get("Last-Modified"),
+        source_last_modified=page.last_modified,
     )
 
 

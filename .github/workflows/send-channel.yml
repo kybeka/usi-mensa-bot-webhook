@@ -65,14 +65,41 @@ jobs:
         id: delivery-date
         run: |
           delivery_date="$(TZ="$TIMEZONE" date +%Y-%m-%d)"
+          week_key="$(TZ="$TIMEZONE" date -d "$delivery_date" +%G-W%V)"
           echo "date=$delivery_date" >> "$GITHUB_OUTPUT"
+          echo "week_key=$week_key" >> "$GITHUB_OUTPUT"
           echo "lock_name=menu-delivery-$delivery_date" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the newest current-week menu snapshot
+        if: env.DELIVERY_MODE == 'live'
+        id: menu-snapshot-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: menu-cache
+          key: menu-snapshot-${{ steps.delivery-date.outputs.week_key }}-${{ steps.delivery-date.outputs.date }}
+          restore-keys: |
+            menu-snapshot-${{ steps.delivery-date.outputs.week_key }}-
+
+      - name: Prepare the current-week menu snapshot
+        if: env.DELIVERY_MODE == 'live'
+        env:
+          DELIVERY_DATE: ${{ steps.delivery-date.outputs.date }}
+          MENU_SNAPSHOT_PATH: menu-cache/current-week.html
+        run: python -m mensa_bot.snapshot
 
       - name: Validate the live payload before acquiring the lock
         if: github.event_name == 'schedule' || inputs.delivery_mode == 'live'
         env:
           DELIVERY_MODE: dry-run
+          MENU_SNAPSHOT_PATH: menu-cache/current-week.html
         run: python channel_job.py
+
+      - name: Save the current-week menu snapshot
+        if: env.DELIVERY_MODE == 'live' && steps.menu-snapshot-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: menu-cache
+          key: menu-snapshot-${{ steps.delivery-date.outputs.week_key }}-${{ steps.delivery-date.outputs.date }}
 
       - name: Check the per-day delivery lock
         if: env.DELIVERY_MODE == 'live'
@@ -104,4 +131,5 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MENU_SNAPSHOT_PATH: ${{ (github.event_name == 'schedule' || inputs.delivery_mode == 'live') && 'menu-cache/current-week.html' || '' }}
         run: python channel_job.py
