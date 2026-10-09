@@ -41,7 +41,7 @@ Scheduled runs use `DELIVERY_MODE=live`. Manual workflow runs default to `dry-ru
 
 ## Delivery safeguards
 
-- The workflow runs once each weekday at 05:00 UTC. Its local delivery gate accepts delayed scheduled runs from 06:00 through 17:59 Europe/Zurich, covering both summer and winter time.
+- The workflow runs once each weekday at 07:17 Europe/Zurich. The non-zero minute reduces GitHub Actions scheduling delays, and the timezone-aware schedule follows daylight saving time automatically. Its local delivery gate accepts delayed scheduled runs from 06:00 through 17:59 Europe/Zurich.
 - Live runs are serialized so two deliveries cannot start concurrently.
 - Each successful live preflight caches the validated source HTML under a date-specific key for its ISO week. A later run restores the newest snapshot from that same week.
 - If 1908 publishes the following week early, the bot may use the restored snapshot only when it still covers the requested date and passes the full parser validation.
