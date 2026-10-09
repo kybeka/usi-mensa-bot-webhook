@@ -13,9 +13,9 @@ on:
           - dry-run
           - live
   schedule:
-    # 05:00 UTC = 07:00 CEST / 06:00 CET; scheduled early to absorb GitHub's
-    # typical 3-4 h delay and still land before noon Zurich time.
-    - cron: '0 5 * * 1-5'
+    # Avoid minute 00, when GitHub Actions has its highest scheduled-workflow load.
+    - cron: '17 7 * * 1-5'
+      timezone: Europe/Zurich
 
 permissions:
   actions: read
