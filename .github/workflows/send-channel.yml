@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   send-channel:
+    if: ${{ github.event_name != 'schedule' || vars.DISABLE_GITHUB_SCHEDULE != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
