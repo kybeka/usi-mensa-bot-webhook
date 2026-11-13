@@ -37,11 +37,12 @@ The official deployment publishes to Telegram. Fork owners can add their own Dis
 
 The Telegram bot must be a channel administrator with permission to edit messages so it can pin the Monday overview.
 
-Scheduled runs use `DELIVERY_MODE=live`. Manual workflow runs default to `dry-run`; a live run is accepted only from the default branch.
+Scheduled runs use `DELIVERY_MODE=live`. Workflow dispatches default to `dry-run` and can explicitly select `live`; a live run is accepted only from the default branch.
 
 ## Delivery safeguards
 
-- The workflow runs once each weekday at 07:17 Europe/Zurich. The non-zero minute reduces GitHub Actions scheduling delays, and the timezone-aware schedule follows daylight saving time automatically. Its local delivery gate accepts delayed scheduled runs from 06:00 through 17:59 Europe/Zurich.
+- The workflow retains a weekday 07:17 Europe/Zurich schedule for standalone forks. The hosted repository sets `DISABLE_GITHUB_SCHEDULE=true` and is instead dispatched by its external scheduler at 11:00 Europe/Zurich. Forks without that variable continue using the internal schedule.
+- The local delivery gate accepts delayed GitHub schedule events from 06:00 through 17:59 Europe/Zurich.
 - Live runs are serialized so two deliveries cannot start concurrently.
 - Each successful live preflight caches the validated source HTML under a date-specific key for its ISO week. A later run restores the newest snapshot from that same week.
 - If 1908 publishes the following week early, the bot may use the restored snapshot only when it still covers the requested date and passes the full parser validation.

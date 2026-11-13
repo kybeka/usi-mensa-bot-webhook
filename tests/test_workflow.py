@@ -4,14 +4,21 @@ from pathlib import Path
 WORKFLOW = Path(".github/workflows/send-channel.yml")
 
 
-def test_schedule_avoids_peak_load_and_uses_zurich_time() -> None:
+def test_hosted_repo_can_disable_the_internal_schedule_without_breaking_forks() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     schedule = workflow.index("  schedule:")
     permissions = workflow.index("permissions:")
     schedule_block = workflow[schedule:permissions]
+    job = workflow.index("  send-channel:")
+    steps = workflow.index("    steps:")
+    job_header = workflow[job:steps]
 
     assert "cron: '17 7 * * 1-5'" in schedule_block
     assert "timezone: Europe/Zurich" in schedule_block
+    assert (
+        "if: ${{ github.event_name != 'schedule' || "
+        "vars.DISABLE_GITHUB_SCHEDULE != 'true' }}"
+    ) in job_header
 
 
 def test_live_payload_validation_runs_in_dry_run_mode_before_the_lock() -> None:
